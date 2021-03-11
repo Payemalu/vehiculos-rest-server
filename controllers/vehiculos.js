@@ -1,39 +1,58 @@
 const { response, request } = require('express');
+const bcryptjs = require('bcryptjs');
+
+const Usuario = require('../models/usuario');
 
 
-const vehiculosGet = (req = request, res = response) => {
+const vehiculosGet = async(req = request, res = response) => {
 
-    const { q, nombre = 'No name', apikey, page = 1, limit } = req.query;
+    const { limite = 5, desde = 0 } = req.query;
+    const query = { estado: true };
+
+    const [total, vehiculos] = await Promise.all([
+        Vehiculo.countDocuments(query),
+        Vehiculo.find(query)
+        .skip(Number(desde))
+        .limit(Number(limite))
+    ]);
 
     res.json({
-        msg: 'get API - controlador',
-        q,
-        nombre,
-        apikey,
-        page,
-        limit
+        total,
+        vehiculos
     });
 }
 
-const vehiculosPost = (req, res = response) => {
+const vehiculosPost = async(req, res = response) => {
 
-    const { nombre, edad } = req.body;
+    const { image, make, model, description, estimatedate, id, km } = req.body;
+    const vehiculo = new Vehiculo({ image, make, model, description, estimatedate, id, km });
+
+    // Encriptar la contraseña
+    const salt = bcryptjs.genSaltSync();
+    vehiculo.password = bcryptjs.hashSync(password, salt);
+
+    // Guardar en BD
+    await vehiculo.save();
 
     res.json({
-        msg: 'post API - vehiculosPost',
-        nombre,
-        edad
+        vehiculo
     });
 }
 
-const vehiculosPut = (req, res = response) => {
+const vehiculosPut = async(req, res = response) => {
 
     const { id } = req.params;
+    const { _id, password, google, correo, ...resto } = req.body;
 
-    res.json({
-        msg: 'put API - vehiculosPut',
-        id
-    });
+    if (password) {
+        // Encriptar la contraseña
+        const salt = bcryptjs.genSaltSync();
+        resto.password = bcryptjs.hashSync(password, salt);
+    }
+
+    const vehiculo = await Vehiculo.findByIdAndUpdate(id, resto);
+
+    res.json(usuario);
 }
 
 const vehiculosPatch = (req, res = response) => {
@@ -42,10 +61,17 @@ const vehiculosPatch = (req, res = response) => {
     });
 }
 
-const vehiculosDelete = (req, res = response) => {
-    res.json({
-        msg: 'delete API - vehiculosDelete'
-    });
+const vehiculosDelete = async(req, res = response) => {
+
+    const { id } = req.params;
+
+    // Fisicamente lo borramos
+    // const vehiculo = await Vehiculo.findByIdAndDelete( id );
+
+    const vehiculo = await Vehiculo.findByIdAndUpdate(id, { estado: false });
+
+
+    res.json(usuario);
 }
 
 
